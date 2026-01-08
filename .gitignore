@@ -1,0 +1,5 @@
+# Superego
+.superego/
+
+# Auto-generated state
+.last_run.json
