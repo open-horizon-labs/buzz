@@ -151,7 +151,7 @@ process_repo() {
         fi
     fi
 
-    local repo="cloud-atlas-ai/$short_name"
+    local repo="open-horizon-labs/$short_name"
     local since=$(get_since "$short_name")
 
     echo "[$short_name] Fetching PRs since $since..." >&2
