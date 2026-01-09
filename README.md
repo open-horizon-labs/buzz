@@ -11,30 +11,33 @@ GitHub PRs → LLM summarization → OH decision logs
    (noise)      (structure)        (context)
 ```
 
-20 PR titles become: "Miranda: hardening operational commands, better session management."
+20 PR titles become: "The ecosystem is solidifying from 'collection of tools' into 'coherent platform'."
 
 ## Usage
 
 ```bash
-# Digest merged PRs from a repo, post to OH
-./buzz.sh cloud-atlas-ai/open-horizons
+# All repos + executive summary (default)
+./buzz.sh
 
-# Custom date range
-./buzz.sh cloud-atlas-ai/miranda --since 2026-01-01
+# Single repo
+./buzz.sh miranda
 
-# Dry run (preview without posting)
-./buzz.sh cloud-atlas-ai/superego --dry-run
+# Preview without posting
+./buzz.sh --dry-run
+
+# Force re-post (override duplicate detection)
+./buzz.sh --force
 ```
 
 ## Requirements
 
 - `gh` CLI (authenticated)
 - `claude` CLI (authenticated)
-- `OH_API_KEY` and `OH_API_URL` environment variables
+- `OH_API_KEY` environment variable
 
 ## Architecture
 
-Shell script. ~30 lines. Composes existing tools.
+Shell script composing existing tools:
 
 ```
 buzz.sh
@@ -50,13 +53,11 @@ Each repo maps to an endeavor in the Cloud Atlas AI context:
 ```
 Cloud Atlas AI (Context)
 └── Build AI-Augmented Strategic OS (Mission)
-    └── Activity Awareness (Aim)
-        ├── open-horizons (Initiative) ← digests here
+    └── Activity Awareness (Aim) ← executive summary
+        ├── open-horizons (Initiative) ← per-repo digests
         ├── superego (Initiative)
         └── ...
 ```
-
-Digests become decision logs on the repo's endeavor.
 
 ## Part of The Matrix
 
