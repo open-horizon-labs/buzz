@@ -100,7 +100,7 @@ call_llm() {
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
             -d "{
-                \"model\": \"claude-opus-4-5-20250514\",
+                \"model\": \"claude-opus-4-5\",
                 \"max_tokens\": 1024,
                 \"messages\": [{
                     \"role\": \"user\",
