@@ -15,7 +15,6 @@ SUMMARY_PROMPT_FILE="$SCRIPT_DIR/summary_prompt.md"
 # Defaults
 OH_API_URL="https://app.openhorizons.me"
 DRY_RUN=false
-FORCE=false
 
 usage() {
     cat <<EOF
@@ -29,7 +28,6 @@ Arguments:
 
 Options:
     --dry-run       Preview digest without posting to OH
-    --force         Post even if digest already exists for today
     -h, --help      Show this help
 
 Environment:
@@ -49,10 +47,6 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --dry-run)
             DRY_RUN=true
-            shift
-            ;;
-        --force)
-            FORCE=true
             shift
             ;;
         -h|--help)
@@ -139,16 +133,6 @@ process_repo() {
     if [[ -z "$endeavor_id" ]]; then
         echo "Error: No endeavor ID for '$short_name'" >&2
         return 1
-    fi
-
-    # Check for existing digest FIRST (before expensive LLM call)
-    if [[ "$DRY_RUN" == false && "$FORCE" == false ]]; then
-        local existing=$(curl -s "${OH_API_URL}/api/logs?entity_id=${endeavor_id}&start_date=${TODAY}&end_date=${TODAY}" \
-            -H "Authorization: Bearer $OH_API_KEY")
-        if echo "$existing" | jq -e '.logs | length > 0' > /dev/null 2>&1; then
-            echo "[$short_name] Digest exists, skipping (use --force)" >&2
-            return 0
-        fi
     fi
 
     local repo="open-horizon-labs/$short_name"
@@ -262,16 +246,6 @@ AIM_ID=$(jq -r '._activity_awareness_aim // empty' "$REPOS_FILE")
 if [[ -z "$AIM_ID" ]]; then
     echo "Warning: No _activity_awareness_aim in repos.json, skipping executive summary post" >&2
     exit 0
-fi
-
-# Check for existing summary
-if [[ "$FORCE" == false ]]; then
-    EXISTING=$(curl -s "${OH_API_URL}/api/logs?entity_id=${AIM_ID}&start_date=${TODAY}&end_date=${TODAY}" \
-        -H "Authorization: Bearer $OH_API_KEY")
-    if echo "$EXISTING" | jq -e '.logs | length > 0' > /dev/null 2>&1; then
-        echo "Executive summary already exists for today (use --force)"
-        exit 0
-    fi
 fi
 
 RESPONSE=$(post_to_oh "$AIM_ID" "$EXEC_SUMMARY")
