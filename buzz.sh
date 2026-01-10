@@ -31,7 +31,8 @@ Options:
     -h, --help      Show this help
 
 Environment:
-    OH_API_KEY      Open Horizons API key (required unless --dry-run)
+    OH_API_KEY          Open Horizons API key (required unless --dry-run)
+    ANTHROPIC_API_KEY   If set, uses Anthropic API directly instead of claude CLI
 
 Examples:
     buzz                    # All repos + executive summary
@@ -82,6 +83,40 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
 fi
 
 TODAY=$(date +%Y-%m-%d)
+
+# Call LLM with prompt and input
+# Uses Anthropic API if ANTHROPIC_API_KEY is set, otherwise claude CLI
+call_llm() {
+    local prompt="$1"
+    local input="$2"
+
+    if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+        # Use Anthropic API directly
+        local escaped_prompt=$(echo "$prompt" | jq -Rs .)
+        local escaped_input=$(echo "$input" | jq -Rs .)
+
+        local response=$(curl -s "https://api.anthropic.com/v1/messages" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "{
+                \"model\": \"claude-opus-4-5-20250514\",
+                \"max_tokens\": 1024,
+                \"messages\": [{
+                    \"role\": \"user\",
+                    \"content\": ${escaped_prompt}
+                }, {
+                    \"role\": \"user\",
+                    \"content\": ${escaped_input}
+                }]
+            }")
+
+        echo "$response" | jq -r '.content[0].text // empty'
+    else
+        # Use claude CLI
+        echo "$input" | claude -p "$prompt" --output-format text
+    fi
+}
 
 # Get SINCE date for a repo (from last run or 24h ago)
 get_since() {
@@ -152,7 +187,7 @@ process_repo() {
 
     echo "[$short_name] Found $commit_count commits, generating digest..." >&2
 
-    local digest=$(echo "$commits" | claude -p "$(cat "$PROMPT_FILE")" --output-format text) || {
+    local digest=$(call_llm "$(cat "$PROMPT_FILE")" "$commits") || {
         echo "[$short_name] LLM summarization failed" >&2
         return 1
     }
@@ -228,7 +263,7 @@ else
     SUMMARY_PROMPT=$(cat "$SUMMARY_PROMPT_FILE")
 fi
 
-EXEC_SUMMARY=$(echo "$ALL_DIGESTS" | claude -p "$SUMMARY_PROMPT" --output-format text) || {
+EXEC_SUMMARY=$(call_llm "$SUMMARY_PROMPT" "$ALL_DIGESTS") || {
     echo "Error: Executive summary generation failed" >&2
     exit 1
 }
