@@ -154,22 +154,21 @@ process_repo() {
     local repo="open-horizon-labs/$short_name"
     local since=$(get_since "$short_name")
 
-    echo "[$short_name] Fetching PRs since $since..." >&2
+    echo "[$short_name] Fetching commits since $since..." >&2
 
-    local prs=$(gh pr list --repo "$repo" --state merged --search "merged:>=$since" \
-        --json number,title,body,author,mergedAt,additions,deletions \
-        --limit 50)
+    local commits=$(gh api "repos/$repo/commits?since=$since" \
+        --jq '[.[] | {sha: .sha[0:7], message: .commit.message, author: .commit.author.name, date: .commit.committer.date}]')
 
-    local pr_count=$(echo "$prs" | jq 'length')
+    local commit_count=$(echo "$commits" | jq 'length')
 
-    if [[ "$pr_count" == "0" ]]; then
-        echo "[$short_name] No merged PRs" >&2
+    if [[ "$commit_count" == "0" ]]; then
+        echo "[$short_name] No commits" >&2
         return 0
     fi
 
-    echo "[$short_name] Found $pr_count PRs, generating digest..." >&2
+    echo "[$short_name] Found $commit_count commits, generating digest..." >&2
 
-    local digest=$(echo "$prs" | claude -p "$(cat "$PROMPT_FILE")" --output-format text) || {
+    local digest=$(echo "$commits" | claude -p "$(cat "$PROMPT_FILE")" --output-format text) || {
         echo "[$short_name] LLM summarization failed" >&2
         return 1
     }
